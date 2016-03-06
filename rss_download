@@ -1,0 +1,30 @@
+#!/usr/bin/env ruby
+
+require 'net/http'
+require 'uri'
+require "rexml/document"
+require 'byebug'
+
+include REXML
+
+def get_rss_content
+  Net::HTTP.get(URI.parse(get_url))
+end
+
+def get_url
+  ENV['RSS_DOWNLOAD_URL']
+end
+
+def get_values document, xpath
+  xpath_document = Document.new document
+  XPath.each(xpath_document, xpath) do |node|
+    if node.is_a?(Attribute)
+      def node.parent
+        self.element
+      end
+    end
+    puts node.text
+  end
+end
+
+get_values(get_rss_content, "//title")
