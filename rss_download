@@ -1,0 +1,103 @@
+#!/usr/bin/env ruby
+
+require 'net/http'
+require 'uri'
+require "rexml/document"
+require 'byebug'
+require 'open-uri'
+require 'fileutils'
+require 'yaml'
+
+include REXML
+
+class RSSDownloader
+  class FeedConfig
+    attr_accessor :name,
+                  :feed_url,
+                  :element_xpath,
+                  :title_xpath,
+                  :title_matcher,
+                  :download_xpath,
+                  :download_dir
+
+    def initialize feed
+      @name             = feed['name']
+      @feed_url         = feed['feed_url']
+      @element_xpath    = feed['element_xpath']
+      @title_xpath      = feed['title_xpath']
+      @title_matcher    = feed['title_matcher']
+      @download_xpath   = feed['download_xpath']
+      @download_dir     = feed['download_dir']
+    end
+  end
+
+  def initialize
+    @yaml  = YAML.load_file(get_config_file_path)
+    @feeds = []
+  end
+
+  def parse
+    @yaml['feeds'].each do |feed|
+      @feeds.push(FeedConfig.new(feed))
+    end
+  end
+
+  def run
+    parse
+
+    @feeds.each do |feed|
+      feed_content = get_rss_content feed.feed_url
+      feed_item_list = get_values feed_content, feed.element_xpath
+
+      feed_item_list.each do |feed_item|
+        title = feed_item.elements[feed.title_xpath].text
+        if title.match feed.title_matcher
+          download_link = feed_item.elements[feed.download_xpath].text
+          download_item download_link, feed.download_dir, title
+        end
+      end
+    end
+  end
+
+  def download_item url, directory, file_name
+    FileUtils.makedirs directory
+
+    sanitized_file_name = sanitize_filename file_name
+    file_path = File.join directory, sanitized_file_name
+
+    File.open(file_path, "wb") do |saved_file|
+      open(url, "rb") do |read_file|
+        saved_file.write(read_file.read)
+      end
+    end
+  end
+
+  def sanitize_filename(filename)
+    fn = filename.split /(?<=.)\.(?=[^.])(?!.*\.[^.])/m
+    fn.map! { |s| s.gsub /[^a-z0-9\-]+/i, '_' }
+    return fn.join '.'
+  end
+
+  def get_rss_content url
+    Net::HTTP.get(URI.parse(url))
+  end
+
+  def get_config_file_path
+    "#{Dir.home}/.rss-downloader/config.yml"
+  end
+
+  def get_values document, xpath
+    xpath_document = Document.new document
+    XPath.each(xpath_document, xpath) do |node|
+      if node.is_a?(Attribute)
+        def node.parent
+          self.element
+        end
+      end
+      puts node.text
+    end
+  end
+end
+
+@rss_downloader = RSSDownloader.new
+@rss_downloader.run
