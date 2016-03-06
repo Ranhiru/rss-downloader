@@ -9,6 +9,8 @@ include REXML
 
 class FeedList
   class Feed
+    attr_accessor :name, :feed_url, :xpath, :matcher, :download_dir
+
     def initialize feed
       @name         = feed['name']
       @feed_url     = feed['feed_url']
@@ -27,6 +29,11 @@ class FeedList
     @yaml['feeds'].each do |feed|
       @feeds.push(Feed.new(feed))
     end
+    debugger
+  end
+
+  def run
+
   end
 
   def get_rss_content
@@ -52,3 +59,4 @@ end
 
 @feed_list = FeedList.new
 @feed_list.parse
+@feed.run
