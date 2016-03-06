@@ -7,12 +7,35 @@ require 'byebug'
 
 include REXML
 
-def get_rss_content
-  Net::HTTP.get(URI.parse(get_url))
-end
+class FeedList
+  class Feed
+    def initialize feed
+      @name         = feed['name']
+      @feed_url     = feed['feed_url']
+      @xpath        = feed['xpath']
+      @matcher      = feed['matcher']
+      @download_dir = feed['download_dir']
+    end
+  end
 
-def get_url
-  ENV['RSS_DOWNLOAD_URL']
+  def initialize
+    @yaml  = YAML.load_file(get_config_file_path)
+    @feeds = []
+  end
+
+  def parse
+    @yaml['feeds'].each do |feed|
+      @feeds.push(Feed.new(feed))
+    end
+  end
+
+  def get_rss_content
+    Net::HTTP.get(URI.parse(get_url))
+  end
+
+  def get_config_file_path
+    "#{Dir.home}/.rss-downloader/config.yml"
+  end
 end
 
 def get_values document, xpath
@@ -27,4 +50,5 @@ def get_values document, xpath
   end
 end
 
-get_values(get_rss_content, "//title")
+@feed_list = FeedList.new
+@feed_list.parse
