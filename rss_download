@@ -4,6 +4,8 @@ require 'net/http'
 require 'uri'
 require "rexml/document"
 require 'byebug'
+require 'open-uri'
+require 'fileutils'
 
 include REXML
 
@@ -45,8 +47,34 @@ class RSSDownloader
     @feeds.each do |feed|
       feed_content = get_rss_content feed.feed_url
       feed_item_list = get_values feed_content, feed.element_xpath
-      debugger
+
+      feed_item_list.each do |feed_item|
+        title = feed_item.elements[feed.title_xpath].text
+        if title.match feed.title_matcher
+          download_link = feed_item.elements[feed.download_xpath].text
+          download_item download_link, feed.download_dir, title
+        end
+      end
     end
+  end
+
+  def download_item url, directory, file_name
+    FileUtils.makedirs directory
+
+    sanitized_file_name = sanitize_filename file_name
+    file_path = File.join directory, sanitized_file_name
+
+    File.open(file_path, "wb") do |saved_file|
+      open(url, "rb") do |read_file|
+        saved_file.write(read_file.read)
+      end
+    end
+  end
+
+  def sanitize_filename(filename)
+    fn = filename.split /(?<=.)\.(?=[^.])(?!.*\.[^.])/m
+    fn.map! { |s| s.gsub /[^a-z0-9\-]+/i, '_' }
+    return fn.join '.'
   end
 
   def get_rss_content url
