@@ -7,16 +7,24 @@ require 'byebug'
 
 include REXML
 
-class FeedList
-  class Feed
-    attr_accessor :name, :feed_url, :xpath, :matcher, :download_dir
+class RSSDownloader
+  class FeedConfig
+    attr_accessor :name,
+                  :feed_url,
+                  :element_xpath,
+                  :title_xpath,
+                  :title_matcher,
+                  :download_xpath,
+                  :download_dir
 
     def initialize feed
-      @name         = feed['name']
-      @feed_url     = feed['feed_url']
-      @xpath        = feed['xpath']
-      @matcher      = feed['matcher']
-      @download_dir = feed['download_dir']
+      @name             = feed['name']
+      @feed_url         = feed['feed_url']
+      @element_xpath    = feed['element_xpath']
+      @title_xpath      = feed['title_xpath']
+      @title_matcher    = feed['title_matcher']
+      @download_xpath   = feed['download_xpath']
+      @download_dir     = feed['download_dir']
     end
   end
 
@@ -27,36 +35,40 @@ class FeedList
 
   def parse
     @yaml['feeds'].each do |feed|
-      @feeds.push(Feed.new(feed))
+      @feeds.push(FeedConfig.new(feed))
     end
-    debugger
   end
 
   def run
+    parse
 
+    @feeds.each do |feed|
+      feed_content = get_rss_content feed.feed_url
+      feed_item_list = get_values feed_content, feed.element_xpath
+      debugger
+    end
   end
 
-  def get_rss_content
-    Net::HTTP.get(URI.parse(get_url))
+  def get_rss_content url
+    Net::HTTP.get(URI.parse(url))
   end
 
   def get_config_file_path
     "#{Dir.home}/.rss-downloader/config.yml"
   end
-end
 
-def get_values document, xpath
-  xpath_document = Document.new document
-  XPath.each(xpath_document, xpath) do |node|
-    if node.is_a?(Attribute)
-      def node.parent
-        self.element
+  def get_values document, xpath
+    xpath_document = Document.new document
+    XPath.each(xpath_document, xpath) do |node|
+      if node.is_a?(Attribute)
+        def node.parent
+          self.element
+        end
       end
+      puts node.text
     end
-    puts node.text
   end
 end
 
-@feed_list = FeedList.new
-@feed_list.parse
-@feed.run
+@rss_downloader = RSSDownloader.new
+@rss_downloader.run
