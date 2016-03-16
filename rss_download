@@ -6,6 +6,7 @@ require "rexml/document"
 require 'byebug'
 require 'open-uri'
 require 'fileutils'
+require 'yaml'
 
 include REXML
 
