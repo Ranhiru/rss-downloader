@@ -63,7 +63,7 @@ class RSSDownloader
     FileUtils.makedirs directory
 
     sanitized_file_name = sanitize_filename file_name
-    file_path = File.join directory, sanitized_file_name
+    file_path = File.join(directory, sanitized_file_name + '.torrent')
 
     File.open(file_path, "wb") do |saved_file|
       open(url, "rb") do |read_file|
